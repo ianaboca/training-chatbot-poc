@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Delivery Support</title>
+    <style>
+        .conversation {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px;
+            max-width: 500px;
+            height: 300px;
+            overflow-y: scroll;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 5px;
+            border-radius: 5px;
+        }
+
+        .agent {
+            background-color: #e0e0e0;
+        }
+
+        .customer {
+            background-color: #d4eaff;
+        }
+
+        input[type="text"] {
+            width: 70%;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="conversation">
+        <!-- <div class="message customer">Customer: Hi, I placed an order and I'm wondering when it will arrive.</div> -->
+        <!-- <div class="message customer">Hi, I placed an order and I want to cancel it.</div> -->
+    </div>
+    <input type="text" id="agentInput" placeholder="Type your response...">
+    <button onclick="sendMessage()">Send</button>
+    <button onclick="copyConversation()">Copy the conversation</button>
+
+    <script>
+        async function sendMessage() {
+            var agentMessage = document.getElementById("agentInput").value;
+            var conversation = document.querySelector(".conversation");
+            const messages = conversation.querySelectorAll(".message")
+            console.log(`messages=${messages}, messages.length=${messages.length}`)
+            const messageHistory = []
+            for (const msg of messages) {
+                const role = msg.classList.contains("customer") ? "assistant" : "user"
+                const content = msg.innerText || msg.textContent
+                // console.log(`role=${role}, content=${content}`)
+                messageHistory.push({ role, content })
+            }
+            // console.log(`messageHistory.length=${messageHistory.length}`)
+            var agentDiv = document.createElement("div");
+            agentDiv.className = "message agent";
+            // agentDiv.textContent = "Agent: " + agentMessage;
+            agentDiv.textContent = agentMessage;
+            conversation.appendChild(agentDiv);
+
+            var customerResponse = await getCustomerResponse(messageHistory, agentMessage);
+            var customerDiv = document.createElement("div");
+            customerDiv.className = "message customer";
+            // customerDiv.textContent = "Customer: " + customerResponse;
+            customerDiv.textContent = customerResponse;
+            conversation.appendChild(customerDiv);
+        }
+
+        async function getCustomerResponse(messageHistory, agentMessage) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const apiKey = urlParams.get("apiKey")
+            console.log(`apiKey=${apiKey}`)
+            if (!apiKey) {
+                window.alert("The API key has not been provided. Add apiKey query parameter to the URL.")
+                throw new Error("The API key has not been provided. Add apiKey query parameter to the URL.")
+            }
+
+            const prompt = [
+                {role: 'system', content: 'You are a customer of a food delivery app whose order went missing. You are trying to cancel the order. I am an assistant, a customer support agent helping you resolve your issue.'},
+                {role: 'user', content: 'Agent: Hello, how may I assist you today?'},
+                {role: 'assistant', content: 'Customer: i want to cancel my order'},
+                {role: 'user', content: 'Agent: Could you share the reason why you would like to cancel your order?'},
+                {role: 'assistant', content: 'Customer: its running late'},
+            ]
+            const messages = [
+                ...prompt,
+                ...messageHistory,
+                {role: 'user', content: "Agent: " + agentMessage},
+            ]
+            console.log(messages)
+            var response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + apiKey
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4',
+                    temperature: 0.5,
+                    messages,
+                })
+            });
+
+            if (!response.ok) {
+                console.error(await response.text())
+                return ""
+            }
+
+            var data = await response.json();
+            console.log(`usage={ prompt_tokens: ${data.usage.prompt_tokens}, completion_tokens" ${data.usage.completion_tokens}, total_tokens: ${data.usage.total_tokens}`)
+            return data.choices.length ? data.choices[0].message.content : "";
+        }
+
+        async function copyConversation() {
+            const conversation = document.querySelector(".conversation")
+            const messages = conversation.querySelectorAll(".message")
+            const messageHistory = []
+            for (const msg of messages) {
+                const role = msg.classList.contains("agent") ? "Agent: " : ""
+                const content = msg.innerText || msg.textContent
+                messageHistory.push(role + content)
+            }
+            await navigator.clipboard.writeText(messageHistory.join("\n"))
+        }
+    </script>
+</body>
+</html>
