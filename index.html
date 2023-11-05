@@ -8,9 +8,9 @@
         .conversation {
             border: 1px solid #ccc;
             padding: 10px;
-            margin: 10px;
+            margin: 10px auto;
             max-width: 500px;
-            height: 300px;
+            height: 70vh;
             overflow-y: scroll;
         }
 
@@ -28,24 +28,52 @@
             background-color: #d4eaff;
         }
 
-        input[type="text"] {
+        .input-tools {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .input-tools button {
+            margin: 5px;
+            width: 30%;
+            max-width: 300px;
+        }
+
+        .input-tools input[type="text"] {
             width: 70%;
+            max-width: 500px;
             padding: 5px;
+            margin-bottom: 5px;
         }
     </style>
 </head>
 <body>
-    <div class="conversation">
-        <!-- <div class="message customer">Customer: Hi, I placed an order and I'm wondering when it will arrive.</div> -->
-        <!-- <div class="message customer">Hi, I placed an order and I want to cancel it.</div> -->
+    <div class="chat">
+        <div class="conversation">
+            <!-- <div class="message customer">Customer: Hi, I placed an order and I'm wondering when it will arrive.</div> -->
+            <!-- <div class="message customer">Hi, I placed an order and I want to cancel it.</div> -->
+        </div>
+        <div class="input-tools">
+            <input type="text" id="agentInput" placeholder="Type your response...">
+            <button onclick="sendMessage()">Send</button>
+            <button onclick="copyConversation()">Copy the conversation</button>
+        </div>
     </div>
-    <input type="text" id="agentInput" placeholder="Type your response...">
-    <button onclick="sendMessage()">Send</button>
-    <button onclick="copyConversation()">Copy the conversation</button>
+
 
     <script>
+        const agentInputElement = document.getElementById("agentInput")
+        agentInputElement.addEventListener("keydown", async function onEvent(e) {
+            if (event.key === "Enter") {
+                await sendMessage()
+                return false
+            }
+        })
+
         async function sendMessage() {
-            var agentMessage = document.getElementById("agentInput").value;
+            var agentMessage = agentInputElement.value;
+            agentInputElement.value = ""
             var conversation = document.querySelector(".conversation");
             const messages = conversation.querySelectorAll(".message")
             console.log(`messages=${messages}, messages.length=${messages.length}`)
@@ -53,15 +81,14 @@
             for (const msg of messages) {
                 const role = msg.classList.contains("customer") ? "assistant" : "user"
                 const content = msg.innerText || msg.textContent
-                // console.log(`role=${role}, content=${content}`)
                 messageHistory.push({ role, content })
             }
-            // console.log(`messageHistory.length=${messageHistory.length}`)
             var agentDiv = document.createElement("div");
             agentDiv.className = "message agent";
             // agentDiv.textContent = "Agent: " + agentMessage;
             agentDiv.textContent = agentMessage;
             conversation.appendChild(agentDiv);
+            agentDiv.scrollIntoView()
 
             var customerResponse = await getCustomerResponse(messageHistory, agentMessage);
             var customerDiv = document.createElement("div");
@@ -69,12 +96,12 @@
             // customerDiv.textContent = "Customer: " + customerResponse;
             customerDiv.textContent = customerResponse;
             conversation.appendChild(customerDiv);
+            customerDiv.scrollIntoView()
         }
 
         async function getCustomerResponse(messageHistory, agentMessage) {
             const urlParams = new URLSearchParams(window.location.search);
             const apiKey = urlParams.get("apiKey")
-            console.log(`apiKey=${apiKey}`)
             if (!apiKey) {
                 window.alert("The API key has not been provided. Add apiKey query parameter to the URL.")
                 throw new Error("The API key has not been provided. Add apiKey query parameter to the URL.")
@@ -92,7 +119,7 @@
                 ...messageHistory,
                 {role: 'user', content: "Agent: " + agentMessage},
             ]
-            console.log(messages)
+
             var response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -107,8 +134,7 @@
             });
 
             if (!response.ok) {
-                console.error(await response.text())
-                return ""
+                throw new Error(await response.text())
             }
 
             var data = await response.json();
