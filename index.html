@@ -50,10 +50,7 @@
 </head>
 <body>
     <div class="chat">
-        <div class="conversation">
-            <!-- <div class="message customer">Customer: Hi, I placed an order and I'm wondering when it will arrive.</div> -->
-            <!-- <div class="message customer">Hi, I placed an order and I want to cancel it.</div> -->
-        </div>
+        <div class="conversation"></div>
         <div class="input-tools">
             <input type="text" id="agentInput" placeholder="Type your response...">
             <button onclick="sendMessage()">Send</button>
@@ -61,8 +58,18 @@
         </div>
     </div>
 
-
     <script>
+        const urlParams = new URLSearchParams(window.location.search)
+
+        const initialMessages = {
+            en: "Hi, how may I help you?",
+            es: "Hola, ¿como puedo ayudarte?",
+        }
+        document.addEventListener("DOMContentLoaded", () => {
+            const initialMessage = initialMessages[urlParams.get("language")]
+            sendMessage(initialMessage || initialMessages.en)
+        })
+
         const agentInputElement = document.getElementById("agentInput")
         agentInputElement.addEventListener("keydown", async function onEvent(e) {
             if (event.key === "Enter") {
@@ -71,9 +78,17 @@
             }
         })
 
-        async function sendMessage() {
-            var agentMessage = agentInputElement.value;
+        function isBlankOrFalsy(input) {
+            return !input || /^\s*$/.test(input)
+        }
+
+        async function sendMessage(message) {
+            var agentMessage = message || agentInputElement.value;
             agentInputElement.value = ""
+            if (isBlankOrFalsy(agentMessage)) {
+                return
+            }
+
             var conversation = document.querySelector(".conversation");
             const messages = conversation.querySelectorAll(".message")
             console.log(`messages=${messages}, messages.length=${messages.length}`)
@@ -85,7 +100,6 @@
             }
             var agentDiv = document.createElement("div");
             agentDiv.className = "message agent";
-            // agentDiv.textContent = "Agent: " + agentMessage;
             agentDiv.textContent = agentMessage;
             conversation.appendChild(agentDiv);
             agentDiv.scrollIntoView()
@@ -93,14 +107,12 @@
             var customerResponse = await getCustomerResponse(messageHistory, agentMessage);
             var customerDiv = document.createElement("div");
             customerDiv.className = "message customer";
-            // customerDiv.textContent = "Customer: " + customerResponse;
             customerDiv.textContent = customerResponse;
             conversation.appendChild(customerDiv);
             customerDiv.scrollIntoView()
         }
 
         async function getCustomerResponse(messageHistory, agentMessage) {
-            const urlParams = new URLSearchParams(window.location.search);
             const apiKey = urlParams.get("apiKey")
             if (!apiKey) {
                 window.alert("The API key has not been provided. Add apiKey query parameter to the URL.")
