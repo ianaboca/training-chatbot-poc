@@ -4,6 +4,10 @@ This is a proof of concept of a customer support agent training tool.
 The goal of the tool is to improve customer satisfaction through realistic case studies and training for the support agents.
 It is powered by generative AI, namely [OpenAI chat completion API](https://platform.openai.com/docs/api-reference/chat/create).
 
+A typical training conversation with the chatbot:
+
+https://github.com/user-attachments/assets/63324d81-a12e-4c3d-9c4b-882a0a80daeb
+
 ## Usage
 
 > [!WARNING]  
